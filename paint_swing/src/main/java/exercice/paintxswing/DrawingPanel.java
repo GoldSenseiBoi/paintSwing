@@ -15,6 +15,8 @@ public class DrawingPanel extends JPanel {
     private Graphics2D g2d;
     private String currentShape = "Rectangle";
     private Color currentColor = Color.BLACK;
+    private int startX, startY;
+    private boolean isDragging = false;
 
     public DrawingPanel() {
         // Initialisation du canvas (image en mémoire pour le dessin)
@@ -28,13 +30,40 @@ public class DrawingPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                drawShape(e.getX(), e.getY());
-                repaint();
+                if (currentShape.equals("Move")) {
+                    startX = e.getX();
+                    startY = e.getY();
+                    isDragging = true;
+                } else {
+                    drawShape(e.getX(), e.getY());
+                    repaint();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (isDragging) {
+                    isDragging = false;
+                }
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (isDragging && currentShape.equals("Move")) {
+                    int deltaX = e.getX() - startX;
+                    int deltaY = e.getY() - startY;
+                    moveCanvas(deltaX, deltaY);
+                    startX = e.getX();
+                    startY = e.getY();
+                    repaint();
+                }
             }
         });
     }
 
-    // Définir la forme actuelle à dessiner (Rectangle, Cercle, Triangle, Gomme)
+    // Définir la forme actuelle à dessiner (Rectangle, Cercle, Triangle, Gomme, Déplacement)
     public void setCurrentShape(String shape) {
         this.currentShape = shape;
     }
@@ -64,6 +93,17 @@ public class DrawingPanel extends JPanel {
                 g2d.fillRect(x, y, 20, 20);
                 break;
         }
+    }
+
+    // Déplacer le contenu du canvas
+    private void moveCanvas(int deltaX, int deltaY) {
+        BufferedImage tempCanvas = new BufferedImage(canvas.getWidth(), canvas.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = tempCanvas.createGraphics();
+        g.drawImage(canvas, deltaX, deltaY, null);
+        g.dispose();
+        g2d = tempCanvas.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        canvas = tempCanvas;
     }
 
     // Redéfinir la méthode paintComponent pour dessiner le canvas sur le JPanel
