@@ -3,15 +3,12 @@ package exercice.paintxswing;
 import java.awt.BorderLayout;
 import java.awt.Color;
 
-import javax.swing.JColorChooser;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 public class PaintApplication extends JFrame {
     private DrawingPanel canvasPanel;
+    private JTextField widthField; // Champ pour la largeur
+    private JTextField heightField; // Champ pour la hauteur
 
     public PaintApplication() {
         // Configuration de la fenêtre principale
@@ -34,8 +31,6 @@ public class PaintApplication extends JFrame {
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
-        
-
         // Menu Fichier
         JMenu fileMenu = new JMenu("Fichier");
         JMenuItem saveItem = new JMenuItem("Sauvegarder");
@@ -45,8 +40,6 @@ public class PaintApplication extends JFrame {
 
         fileMenu.add(saveItem);
         fileMenu.add(loadItem);
-
-        
 
         // Menu Formes
         JMenu shapesMenu = new JMenu("Formes");
@@ -88,13 +81,39 @@ public class PaintApplication extends JFrame {
 
         colorMenu.add(chooseColorItem);
 
+        // Menu Dimensions
+        JMenu dimensionMenu = new JMenu("Dimensions");
+        JLabel widthLabel = new JLabel("Largeur :");
+        widthField = new JTextField(5); // Champ pour la largeur
+        JLabel heightLabel = new JLabel("Hauteur :");
+        heightField = new JTextField(5); // Champ pour la hauteur
+        JButton applyButton = new JButton("Appliquer");
+        applyButton.addActionListener(e -> applyDimensions()); // Appliquer les dimensions
+
+        dimensionMenu.add(widthLabel);
+        dimensionMenu.add(widthField);
+        dimensionMenu.add(heightLabel);
+        dimensionMenu.add(heightField);
+        dimensionMenu.add(applyButton);
+
         // Ajouter les menus à la barre
-        
         menuBar.add(fileMenu);
         menuBar.add(shapesMenu);
         menuBar.add(colorMenu);
+        menuBar.add(dimensionMenu);
 
         return menuBar;
+    }
+
+    // Méthode pour appliquer les dimensions
+    private void applyDimensions() {
+        try {
+            int newWidth = Integer.parseInt(widthField.getText());
+            int newHeight = Integer.parseInt(heightField.getText());
+            canvasPanel.resizeSelectedShape(newWidth, newHeight);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Veuillez entrer des valeurs numériques valides.", "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
