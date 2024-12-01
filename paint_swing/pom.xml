@@ -11,6 +11,12 @@
     
     <dependencies>
         <!-- Ajouter ici les dépendances si besoin -->
+    
+      <dependency>
+        <groupId>org.arakhne.afc.core</groupId>
+        <artifactId>mathgeom</artifactId>
+        <version>17.0</version>
+      </dependency>
     </dependencies>
 
     <build>
