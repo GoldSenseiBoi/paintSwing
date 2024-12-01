@@ -34,8 +34,27 @@ public class PaintApplication extends JFrame {
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
+        
+
+        // Menu Fichier
+        JMenu fileMenu = new JMenu("Fichier");
+        JMenuItem saveItem = new JMenuItem("Sauvegarder");
+        saveItem.addActionListener(e -> canvasPanel.saveImage());
+        JMenuItem loadItem = new JMenuItem("Charger");
+        loadItem.addActionListener(e -> canvasPanel.loadImage());
+
+        fileMenu.add(saveItem);
+        fileMenu.add(loadItem);
+
+        
+
         // Menu Formes
         JMenu shapesMenu = new JMenu("Formes");
+
+        JMenuItem selectAndEditItem = new JMenuItem("Sélection et Édition");
+        selectAndEditItem.addActionListener(e -> canvasPanel.setCurrentShape("SelectAndEdit"));
+        shapesMenu.add(selectAndEditItem);
+
         JMenuItem rectangleItem = new JMenuItem("Rectangle");
         rectangleItem.addActionListener(e -> canvasPanel.setCurrentShape("Rectangle"));
 
@@ -70,6 +89,8 @@ public class PaintApplication extends JFrame {
         colorMenu.add(chooseColorItem);
 
         // Ajouter les menus à la barre
+        
+        menuBar.add(fileMenu);
         menuBar.add(shapesMenu);
         menuBar.add(colorMenu);
 
