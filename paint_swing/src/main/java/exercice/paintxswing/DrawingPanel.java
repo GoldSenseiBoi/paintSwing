@@ -31,6 +31,9 @@ public class DrawingPanel extends JPanel {
     private Point dragStart = null; // Point initial pour déplacement ou redimensionnement
     private boolean resizing = false; // Indique si une forme est en cours de redimensionnement
     private final int handleSize = 10; // Taille des poignées de redimensionnement
+    private boolean isDrawing = false; // Indique si le dessin est en cours
+    private int brushSize = 10; // Taille par défaut du pinceau
+    
 
     public DrawingPanel() {
         // Écouteurs pour dessiner et interagir avec les formes
@@ -45,26 +48,29 @@ public class DrawingPanel extends JPanel {
                         dragStart = e.getPoint();
                     }
                 } else {
-                    // Dessiner une nouvelle forme
-                    drawShape(e.getX(), e.getY());
+                    // Commencer le dessin
+                    isDrawing = true;
+                    drawShape(e.getX(), e.getY()); // Dessiner immédiatement au clic
                 }
                 repaint();
             }
-
+    
             @Override
             public void mouseReleased(MouseEvent e) {
                 dragStart = null; // Terminer le déplacement ou redimensionnement
                 resizing = false;
+                isDrawing = false; // Terminer le dessin
             }
         });
-
+    
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (selectedShape != null && dragStart != null && currentShape.equals("SelectAndEdit")) {
                     if (resizing) {
-                        // Redimensionner la forme
-                        resizeShape(selectedShape, e.getX(), e.getY());
+                        int newWidth = e.getX() - (int) selectedShape.getShape().getBounds2D().getX();
+                        int newHeight = e.getY() - (int) selectedShape.getShape().getBounds2D().getY();
+                        resizeSelectedShape(newWidth, newHeight); // Utiliser la méthode publique ici
                     } else {
                         // Déplacer la forme
                         int deltaX = e.getX() - dragStart.x;
@@ -73,10 +79,15 @@ public class DrawingPanel extends JPanel {
                         dragStart = e.getPoint();
                     }
                     repaint();
+                } else if (isDrawing) {
+                    // Dessiner en continu pendant le glissement de la souris
+                    drawShape(e.getX(), e.getY());
+                    repaint();
                 }
             }
         });
     }
+    
 
     // Définir la forme actuelle à dessiner
     public void setCurrentShape(String shape) {
@@ -90,6 +101,11 @@ public class DrawingPanel extends JPanel {
 
     public Color getCurrentColor() {
         return currentColor;
+    }
+
+    // Configurer les paramètres du pinceau
+    public void setBrushSize(int size) {
+        this.brushSize = size;
     }
 
     // Dessiner une nouvelle forme
@@ -109,16 +125,15 @@ public class DrawingPanel extends JPanel {
                 newShape = new Polygon(xPoints, yPoints, 3);
                 break;
             case "Brush":
-                newShape = new Ellipse2D.Double(x, y, 10, 10); // Petit cercle pour le pinceau
+                newShape = new Ellipse2D.Double(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize); // Cercle pour le pinceau
                 break;
             case "Eraser":
-                newShape = new Rectangle2D.Double(x, y, 20, 20);
-                currentColor = Color.WHITE; // Couleur blanche pour effacer
+                newShape = new Rectangle2D.Double(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize);
                 break;
         }
 
         if (newShape != null) {
-            shapes.add(new ColoredShape(newShape, currentColor));
+            shapes.add(new ColoredShape(newShape, currentShape.equals("Eraser") ? Color.WHITE : currentColor));
         }
     }
 
@@ -148,7 +163,7 @@ public class DrawingPanel extends JPanel {
     }
 
     // Vérifier si la souris est sur une poignée de redimensionnement
-    private boolean isOnResizeHandle(int x, int y, ColoredShape shape) {
+    protected boolean isOnResizeHandle(int x, int y, ColoredShape shape) {
         if (shape.getShape() instanceof Rectangle2D) {
             Rectangle2D rect = (Rectangle2D) shape.getShape();
             return getHandles(rect).stream().anyMatch(handle -> handle.contains(x, y));
@@ -162,53 +177,35 @@ public class DrawingPanel extends JPanel {
         return false;
     }
 
-    public void resizeSelectedShape(int newWidth, int newHeight) {
-        if (selectedShape != null) {
-            Shape shape = selectedShape.getShape();
-            if (shape instanceof Rectangle2D) {
-                Rectangle2D rect = (Rectangle2D) shape;
-                rect.setFrame(rect.getX(), rect.getY(), newWidth, newHeight);
-            } else if (shape instanceof Ellipse2D) {
-                Ellipse2D ellipse = (Ellipse2D) shape;
-                ellipse.setFrame(ellipse.getX(), ellipse.getY(), newWidth, newHeight);
-            } else if (shape instanceof Polygon) {
-                Polygon polygon = (Polygon) shape;
-                // Simplification : redimensionner proportionnellement autour du premier point
-                polygon.xpoints[1] = polygon.xpoints[0] + newWidth / 2;
-                polygon.xpoints[2] = polygon.xpoints[0] - newWidth / 2;
-                polygon.ypoints[1] = polygon.ypoints[0] + newHeight;
-                polygon.ypoints[2] = polygon.ypoints[0] + newHeight;
-                polygon.invalidate(); // Recalculer les limites
-            }
-            repaint();
-        } else {
-            JOptionPane.showMessageDialog(this, "Aucune forme sélectionnée.", "Erreur", JOptionPane.WARNING_MESSAGE);
-        }
-    }
     
-
-    // Redimensionner une forme existante
-    private void resizeShape(ColoredShape shape, int mouseX, int mouseY) {
-        if (shape.getShape() instanceof Rectangle2D) {
-            Rectangle2D rect = (Rectangle2D) shape.getShape();
-            double newWidth = mouseX - rect.getX();
-            double newHeight = mouseY - rect.getY();
-            rect.setFrame(rect.getX(), rect.getY(), Math.max(newWidth, handleSize), Math.max(newHeight, handleSize));
-        } else if (shape.getShape() instanceof Ellipse2D) {
-            Ellipse2D ellipse = (Ellipse2D) shape.getShape();
-            double newWidth = mouseX - ellipse.getX();
-            double newHeight = mouseY - ellipse.getY();
-            ellipse.setFrame(ellipse.getX(), ellipse.getY(), Math.max(newWidth, handleSize), Math.max(newHeight, handleSize));
-        } else if (shape.getShape() instanceof Polygon) {
-            Polygon polygon = (Polygon) shape.getShape();
-            // Redimensionnement simplifié pour les triangles
-            for (int i = 0; i < polygon.npoints; i++) {
-                polygon.xpoints[i] += (mouseX - dragStart.x) / polygon.npoints;
-                polygon.ypoints[i] += (mouseY - dragStart.y) / polygon.npoints;
-            }
-            polygon.invalidate(); // Recalculer les limites du polygone
+// Méthode publique pour redimensionner une forme sélectionnée
+public void resizeSelectedShape(int newWidth, int newHeight) {
+    if (selectedShape != null) {
+        Shape shape = selectedShape.getShape();
+        if (shape instanceof Rectangle2D) {
+            Rectangle2D rect = (Rectangle2D) shape;
+            rect.setFrame(rect.getX(), rect.getY(), newWidth, newHeight);
+        } else if (shape instanceof Ellipse2D) {
+            Ellipse2D ellipse = (Ellipse2D) shape;
+            ellipse.setFrame(ellipse.getX(), ellipse.getY(), newWidth, newHeight);
+        } else if (shape instanceof Polygon) {
+            Polygon polygon = (Polygon) shape;
+            // Simplification pour redimensionner proportionnellement autour du premier point
+            polygon.xpoints[1] = polygon.xpoints[0] + newWidth / 2;
+            polygon.xpoints[2] = polygon.xpoints[0] - newWidth / 2;
+            polygon.ypoints[1] = polygon.ypoints[0] + newHeight;
+            polygon.ypoints[2] = polygon.ypoints[0] + newHeight;
+            polygon.invalidate(); // Recalculer les limites
         }
+        repaint();
+    } else {
+        JOptionPane.showMessageDialog(this, "Aucune forme sélectionnée.", "Erreur", JOptionPane.WARNING_MESSAGE);
     }
+}
+
+
+    
+    
 
     // Obtenir les poignées de redimensionnement d'une forme rectangulaire
     private ArrayList<Rectangle2D> getHandles(Shape shape) {
@@ -221,10 +218,7 @@ public class DrawingPanel extends JPanel {
             handles.add(new Rectangle2D.Double(rect.getMaxX() - handleSize / 2, rect.getMaxY() - handleSize / 2, handleSize, handleSize)); // Coin inférieur droit
         } else if (shape instanceof Ellipse2D) {
             Ellipse2D ellipse = (Ellipse2D) shape;
-            handles.add(new Rectangle2D.Double(ellipse.getMinX() - handleSize / 2, ellipse.getMinY() - handleSize / 2, handleSize, handleSize)); // Coin supérieur gauche
-            handles.add(new Rectangle2D.Double(ellipse.getMaxX() - handleSize / 2, ellipse.getMinY() - handleSize / 2, handleSize, handleSize)); // Coin supérieur droit
-            handles.add(new Rectangle2D.Double(ellipse.getMinX() - handleSize / 2, ellipse.getMaxY() - handleSize / 2, handleSize, handleSize)); // Coin inférieur gauche
-            handles.add(new Rectangle2D.Double(ellipse.getMaxX() - handleSize / 2, ellipse.getMaxY() - handleSize / 2, handleSize, handleSize)); // Coin inférieur droit
+            handles.add(new Rectangle2D.Double(ellipse.getMinX(), ellipse.getMinY(), handleSize, handleSize)); // Simplifié pour les coins principaux
         } else if (shape instanceof Polygon) {
             Polygon polygon = (Polygon) shape;
             for (int i = 0; i < polygon.npoints; i++) {
@@ -299,6 +293,18 @@ public class DrawingPanel extends JPanel {
             }
         }
     }
+
+        // Supprimer la forme sélectionnée
+    public void deleteSelectedShape() {
+        if (selectedShape != null) {
+            shapes.remove(selectedShape); // Supprime la forme de la liste
+            selectedShape = null; // Désélectionne après suppression
+            repaint(); // Redessine le panneau
+        } else {
+            JOptionPane.showMessageDialog(this, "Aucune forme sélectionnée à supprimer.", "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
 
     // Classe interne pour stocker une forme avec sa couleur
     private static class ColoredShape {
